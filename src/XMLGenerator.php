@@ -106,7 +106,7 @@ class CbXMLGenerator extends CbXMLHandler
 
             $xmlFileNode = $errors[$key];
             $file = $cbXML->addChild('file');
-            $file->addAttribute('name', $name);
+            $file->addAttribute('name', realpath($name));
 
             foreach ($xmlFileNode as $xmlItemNode) {
 
