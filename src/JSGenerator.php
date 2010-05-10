@@ -275,7 +275,7 @@ class CbJSGenerator
                     $id,
                     $parentId,
                     $key,
-                    str_replace(DIRECTORY_SEPARATOR, '/', $errors[$value]['complete'])
+                    str_replace(DIRECTORY_SEPARATOR, '/', $errors[$value]['path'].DIRECTORY_SEPARATOR.$errors[$value]['file'])
                 );
             }
         }
@@ -293,7 +293,7 @@ class CbJSGenerator
         $result = array();
         if (is_array($files)) {
             foreach ($files as $fileId => $file) {
-                $folders = explode(DIRECTORY_SEPARATOR, $file['complete']);
+                $folders = explode(DIRECTORY_SEPARATOR, $file['path'].DIRECTORY_SEPARATOR.$file['file']);
 
                 $folders[count($folders)] = $fileId;
                 krsort($folders);

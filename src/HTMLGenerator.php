@@ -215,16 +215,16 @@ class CbHTMLGenerator
         foreach ($errors as $file) {
             $data['errors']   = $this->_cbErrorHandler->getErrorsByFile(
                 $cbXMLFile,
-                $file['complete']
+                $file['path'].DIRECTORY_SEPARATOR.$file['file']
             );
             $data['source']   = $this->_cbJSGenerator->getHighlightedSource(
-                $file['complete'],
+                $file['path'].DIRECTORY_SEPARATOR.$file['file'],
                 $data['errors'],
                 $projectSource
             );
-            $data['filepath'] = $file['complete'];
+            $data['filepath'] = $file['path'].DIRECTORY_SEPARATOR.$file['file'];
             $data['csspath']  = '';
-            $depth            = substr_count($file['complete'], DIRECTORY_SEPARATOR);
+            $depth            = substr_count($file['path'].DIRECTORY_SEPARATOR.$file['file'], DIRECTORY_SEPARATOR);
             for ($i = 1; $i <= $depth; $i ++) {
                 $data['csspath'] .= '../';
             }
@@ -233,7 +233,7 @@ class CbHTMLGenerator
             $dataGenrate['csspath'] = $data['csspath'];
             $dataGenrate['content'] = $this->_render('reviewView', $data);
 
-            $this->_generateView($dataGenrate, $file['complete'] . '.html');
+            $this->_generateView($dataGenrate, $file['path'].DIRECTORY_SEPARATOR.$file['file'] . '.html');
         }
     }
 
