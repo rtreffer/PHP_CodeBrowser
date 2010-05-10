@@ -78,7 +78,7 @@ class CbErrorHandler
      *
      * @var string
      */
-    private $source;
+    private $_source;
 
     /**
      * Supported file extensions in the code browser
@@ -97,13 +97,13 @@ class CbErrorHandler
      */
     public function __construct (
         CbXMLHandler $cbXMLHandler,
-        $source = NULL
-    ) {
+        $source = NULL)
+    {
         $this->cbXMLHandler = $cbXMLHandler;
         if ($source !== NULL) {
             $source = realpath($source);
         }
-        $this->source = $source;
+        $this->_source = $source;
     }
 
     /**
@@ -116,8 +116,8 @@ class CbErrorHandler
      */
     public function getCommonSourcePath($errors)
     {
-        if ($this->source !== NULL) {
-            return $this->source;
+        if ($this->_source !== NULL) {
+            return $this->_source;
         }
         if (empty($errors)) {
             return '';
@@ -172,8 +172,11 @@ class CbErrorHandler
         }
 
         foreach ($errors as $key => &$error) {
-            $pathcompare = strncmp($error['path'], $commonSourcePath,
-                                   $commonSourcePathLength);
+            $pathcompare = strncmp(
+                $error['path'],
+                $commonSourcePath,
+                $commonSourcePathLength
+            );
             // check if this path starts with $commonSourcePath
             if ($pathcompare === 0) {
                 $error['path'] = ltrim(
@@ -183,8 +186,11 @@ class CbErrorHandler
                 continue;
             }
             $realpath = realpath($error['path']);
-            $pathcompare = strncmp($realpath, $commonSourcePath,
-                                   $commonSourcePathLength);
+            $pathcompare = strncmp(
+                $realpath,
+                $commonSourcePath,
+                $commonSourcePathLength
+            );
             if ($pathcompare !== 0) {
                 continue;
             }
@@ -203,7 +209,7 @@ class CbErrorHandler
      */
     public function parseSourceDirectory($errors)
     {
-        $sourceLength = strlen($this->source);
+        $sourceLength = strlen($this->_source);
 
         $errorsByRealpath = array();
         foreach ($errors as $error) {
@@ -213,7 +219,7 @@ class CbErrorHandler
         $fileList = array();
 
         $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($this->source),
+            new RecursiveDirectoryIterator($this->_source),
             RecursiveIteratorIterator::SELF_FIRST
         );
         // copy all errors related to known files
@@ -306,7 +312,8 @@ class CbErrorHandler
     }
 
     /**
-     * Filters the string from the beginning the two input strings have in common.
+     * Filters the string from the beginning the two input strings have in
+     * common.
      *
      * Example:
      * /path/to/source/folder/myFile.php
@@ -314,36 +321,37 @@ class CbErrorHandler
      * will return
      * /path/to/source
      *
-     * @param string $path1  String for comparing
-     * @param string $path2  String for comparing
+     * @param string $leftpath  String for comparing
+     * @param string $rightpath  String for comparing
      *
      * @return string
      */
-    private function _getCommonErrorPath($path1, $path2)
+    private function _getCommonErrorPath($leftpath, $rightpath)
     {
         // split by '/'
-        $patharray1 = explode(DIRECTORY_SEPARATOR, $path1);
-        $patharray2 = explode(DIRECTORY_SEPARATOR, $path2);
+        $leftpatharray = explode(DIRECTORY_SEPARATOR, $leftpath);
+        $rightpatharray = explode(DIRECTORY_SEPARATOR, $rightpath);
 
         // pop filename
-        array_pop($patharray1);
-        array_pop($patharray2);
+        array_pop($leftpatharray);
+        array_pop($rightpatharray);
 
         $commonpath = array();
 
-        $length = min(count($patharray1), count($patharray2));
+        $length = min(count($leftpatharray), count($rightpatharray));
         $position = 0;
 
         while ($position < $length &&
-               $patharray1[$position] === $patharray2[$position]) {
-               $commonpath[] = $patharray1[$position++];
+               $leftpatharray[$position] === $rightpatharray[$position]) {
+               $commonpath[] = $leftpatharray[$position++];
         }
 
         $path = implode(DIRECTORY_SEPARATOR, $commonpath);
         return $path;
     }
 
-    private function _isSupportedFileType($filename, $path) {
+    private function _isSupportedFileType($filename, $path)
+    {
         $fileExtension = array_pop(explode('.', $filename));
         if (in_array($fileExtension, $this->_fileExtensionWhitelist)) {
             return true;
