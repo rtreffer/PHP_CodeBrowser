@@ -63,6 +63,7 @@ if (strpos('@php_dir@', '@php_dir') === false) {
 }
 
 require_once dirname(__FILE__) . '/Util/Autoloader.php';
+require_once 'PHP/Timer.php';
 
 /**
  * CbCLIController
@@ -279,8 +280,6 @@ class CbCLIController
      */
     public static function main()
     {
-        $timeStart = microtime(true);
-
         $xmlLogDir    = null;
         $sourceFolder = null;
         $htmlOutput   = null;
@@ -349,10 +348,7 @@ class CbCLIController
             printf("PHP-CodeBrowser Error: \n%s\n", $e->getMessage());
         }
 
-        $timeEnd = microtime(true);
-        $time    = $timeEnd - $timeStart;
-
-        printf("\nScript took %01.2f seconds to execute\n\n", $time);
+        print "\n" . PHP_Timer::resourceUsage() . "\n";
     }
 
     /**

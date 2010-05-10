@@ -90,4 +90,4 @@ Have a look at the [standard template for Hudson jobs for PHP projects](http://g
 
 ## Contact Information ##
 
-If you have any questions you may get in contact with: Elger Thiele <elger.thiele@mayflower.de>
+If you have any questions you may get in contact with: Elger Thiele <elger DOT thiele AT mayflower DOT de> or Thorsten Rinne <thorsten DOT rinne AT mayflower DOT de>
