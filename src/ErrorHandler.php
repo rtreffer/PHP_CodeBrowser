@@ -49,10 +49,10 @@
 /**
  * CbErrorHandler
  *
- * This class is providing a lists of errors as well lists of filenames that have
- * related errors.
- * For providing this lists the prior generated PHP_CodeBrowser error xml file is
- * parsed.
+ * This class is providing a lists of errors as well lists of filenames that
+ * have related errors.
+ * For providing this lists the prior generated PHP_CodeBrowser error xml file
+ * is parsed.
  *
  * @category  PHP_CodeBrowser
  * @package   PHP_CodeBrowser
@@ -249,8 +249,8 @@ class CbErrorHandler
      * Get the related error elements for given $fileName.
      *
      * @param string $cbXMLFile The XML file to read in
-     * @param string $fileName  The $fileName to search for, could be a mixe of path
-     *                          with filename as well (e.g.
+     * @param string $fileName  The $fileName to search for, could be a mixe of
+     *                          path with filename as well (e.g.
      *                          relative/path/filename.php)
      *
      * @return SimpleXMLElement
