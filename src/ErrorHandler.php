@@ -110,7 +110,6 @@ class CbErrorHandler
      * Get the path all errors have in common.
      *
      * @param array $errors List of all errors and its attributes
-     * @param boolean $canonic Use canonic paths for matching
      *
      * @return string
      */
@@ -350,6 +349,14 @@ class CbErrorHandler
         return $path;
     }
 
+    /**
+     * Tests if a file is supported by the codebrowser.
+     *
+     * @param string $filename The filename of the probed file
+     * @param string $path The path of the file
+     *
+     * @return boolean true if the fieltype is supported
+     **/
     private function _isSupportedFileType($filename, $path)
     {
         $fileExtension = array_pop(explode('.', $filename));
