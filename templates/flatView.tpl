@@ -20,7 +20,7 @@
     		?>
     		<tr class="<?php echo ($key % 2) ? 'oddrow' : 'file';?>">
     			<td>
-    				<a href="./<?php print $file['complete']; ?>.html"><?php print $file['complete']; ?></a>
+    				<a href="./<?php print $file['path'].DIRECTORY_SEPARATOR.$file['file']; ?>.html"><?php print $file['path'].DIRECTORY_SEPARATOR.$file['file']; ?></a>
     			</td>
     			<td align="center">
     				<span class="errors"><?php print $file['count_errors']; ?></span>
