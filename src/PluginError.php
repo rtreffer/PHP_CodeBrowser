@@ -141,21 +141,20 @@ abstract class CbPluginError
         }
 
         $children = $this->_xmlElement->{$this->pluginName}->children();
-        if (!isset($this->_xmlElement->{$this->pluginName})
-            || !is_object($children)
-        ) {
+        if (!isset($this->_xmlElement->{$this->pluginName})) {
             return array();
         }
 
-        $errors = array();
-        foreach ($children as $child) {
-            $errors[] = $this->mapError($child);
-        }
-
         $errorList = array();
-        foreach ($errors as $list) {
-            foreach ($list as $error) {
-                $errorList[hash('md5', $error['name'])][] = $error;
+        foreach ($this->_xmlElement->{$this->pluginName} as $children) {
+            $errors = array();
+            foreach ($children as $child) {
+                $errors[] = $this->mapError($child);
+            }
+            foreach ($errors as $list) {
+                foreach ($list as $error) {
+                    $errorList[hash('md5', $error['name'])][] = $error;
+                }
             }
         }
         return $errorList;
