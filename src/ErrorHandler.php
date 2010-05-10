@@ -74,40 +74,85 @@ class CbErrorHandler
     public $cbXMLHandler;
 
     /**
-     * Supported file types for code browsing
+     * Source path, if available.
+     *
+     * @var string
+     */
+    private $source;
+
+    /**
+     * Supported file extensions in the code browser
      *
      * @var array
      */
-    private $_supportedFileTypes = array('php');
+    private $_fileExtensionWhitelist = array('php', 'js', 'html');
+
+    private $_fileMimeWhitelist = array();
 
     /**
      * Default constructor
      *
      * @param cbXMLHandler $cbXMLHandler The cbXMLHandler object
+     * @param string $source The optional source path
      */
-    public function __construct (CbXMLHandler $cbXMLHandler)
-    {
+    public function __construct (
+        CbXMLHandler $cbXMLHandler,
+        $source = NULL
+    ) {
         $this->cbXMLHandler = $cbXMLHandler;
+        if ($source !== NULL) {
+            $source = realpath($source);
+        }
+        $this->source = $source;
     }
 
     /**
      * Get the path all errors have in common.
      *
      * @param array $errors List of all errors and its attributes
+     * @param boolean $canonic Use canonic paths for matching
      *
      * @return string
      */
     public function getCommonSourcePath($errors)
     {
-        $path = '';
-        foreach ($errors as $error) {
-            $path = $this->_getCommonErrorPath($error['path'], $path);
+        if ($this->source !== NULL) {
+            return $this->source;
         }
+        if (empty($errors)) {
+            return '';
+        }
+        $path = $errors[0]['path'];
+        foreach ($errors as $error) {
+            $errorpath = $error['path'];
+            $path = $this->_getCommonErrorPath($errorpath, $path);
+            if (strlen($path) === 0) {
+                break;
+            }
+        }
+
+        if (count(explode($path, DIRECTORY_SEPARATOR)) > 1) {
+            return $path;
+        }
+        $relpath = $path;
+
+        // retry with realpath
+        $path = realpath($errors[0]['path']);
+        foreach ($errors as $error) {
+            $errorpath = realpath($error['path']);
+            $path = realpath($this->_getCommonErrorPath($errorpath, $path));
+        }
+
+        if (realpath($relpath) === $path) {
+            return $relpath;
+        }
+
         return $path;
     }
 
     /**
-     * Substitude the path all errors have in common.
+     * Substitude the path all errors have in common, using the canonic path
+     * if the source folder is known.
      *
      * @param array $errors The error list
      *
@@ -116,110 +161,86 @@ class CbErrorHandler
     public function replaceCommonSourcePath($errors)
     {
         $commonSourcePath = $this->getCommonSourcePath($errors);
+        $commonSourcePathLength = strlen($commonSourcePath);
+
+        if ($commonSourcePathLength === 0) {
+            return $errors;
+        }
 
         if (!strlen($commonSourcePath)) {
             return $errors;
         }
 
         foreach ($errors as $key => &$error) {
-            $error['complete'] = preg_replace(
-                array(
-                    sprintf(
-                        '(.*%s\%s)',
-                        $commonSourcePath,
-                        DIRECTORY_SEPARATOR
-                    )
-                ),
-                '',
-                $error['complete']
-            );
-            $error['path'] = $commonSourcePath;
+            $pathcompare = strncmp($error['path'], $commonSourcePath,
+                                   $commonSourcePathLength);
+            // check if this path starts with $commonSourcePath
+            if ($pathcompare === 0) {
+                $error['path'] = ltrim(
+                    substr($error['path'], $commonSourcePathLength),
+                    DIRECTORY_SEPARATOR
+                );
+                continue;
+            }
+            $realpath = realpath($error['path']);
+            $pathcompare = strncmp($realpath, $commonSourcePath,
+                                   $commonSourcePathLength);
+            if ($pathcompare !== 0) {
+                continue;
+            }
+            $error['path'] = substr($realpath, $commonSourcePathLength + 1);
         }
+
         return $errors;
     }
 
     /**
      * Parse directory to get all files. Merging existing error list.
      *
-     * @param string $sourceDir The source directory to parse
      * @param array  $errors    The existing error list
      *
      * @return array
      */
-    public function parseSourceDirectory($sourceDir, $errors)
+    public function parseSourceDirectory($errors)
     {
-        if (!isset($sourceDir)) {
-            return $errors;
-        }
+        $sourceLength = strlen($this->source);
 
-        $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($sourceDir),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
+        $errorsByRealpath = array();
+        foreach ($errors as $error) {
+            $errorsByRealpath[$error['complete']] = $error;
+        }
 
         $fileList = array();
+
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($this->source),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        // copy all errors related to known files
+        // and generate an array of errorfree files
         foreach ($items as $name => $item) {
-
-            // only use supported files
-            $boolean = !in_array(
-                substr($item->getFilename(), - 3),
-                $this->_supportedFileTypes
+            $supported = $this->_isSupportedFileType(
+                $item->getFilename(),
+                $item->getPath()
             );
-
-            if ($boolean) {
+            if (!$supported) {
                 continue;
             }
-
-            // set proper error format for files without errors
-            $tmp['complete']      = preg_replace(
-                array(
-                    sprintf(
-                        '(.*%s\%s)',
-                        basename(realpath($sourceDir)),
-                        DIRECTORY_SEPARATOR
-                    )
-                ),
-                '',
-                realpath($item->getPath() . DIRECTORY_SEPARATOR . $item->getFilename())
-            );
-            $tmp['file']          = $item->getFilename();
-            $tmp['path']          = rtrim(realpath($sourceDir), DIRECTORY_SEPARATOR);
-            $tmp['count_errors']  = 0;
-            $tmp['count_notices'] = 0;
-
-            $exists = false;
-            foreach ($errors as $error) {
-
-                // check if file already exists in error list
-                if ($error['file'] == $tmp['file']) {
-                    $cPath = rtrim(
-                        str_replace($error['complete'], '', $tmp['complete']),
-                        DIRECTORY_SEPARATOR
-                    );
-
-                    // add error only if relative path and filename match
-                    $comp = substr_compare(
-                        $error['path'],
-                        $cPath,
-                        -1 * strlen($cPath)
-                    );
-
-                    if (0 === $comp || $error['complete'] === $tmp['complete']) {
-                        $error['complete'] = sprintf(
-                            '%s%s',
-                            ($cPath) ? $cPath . DIRECTORY_SEPARATOR : '',
-                            $error['complete']
-                        );
-                        $error['path']     = $sourceDir;
-                        $exists            = true;
-                        $fileList[$tmp['complete']] = $error;
-                    }
-                }
+            $realpath = $item->getRealPath();
+            if (array_key_exists($realpath, $errorsByRealpath)) {
+                $error = $errorsByRealpath[$realpath];
+                $fileList[$error['complete']] = $error;
+                continue;
             }
-            if (!$exists) {
-                $fileList[$tmp['complete']] = $tmp;
-            }
+            $error = array();
+            $error['file'] = $item->getFilename();
+            $error['path'] = substr(dirname($realpath), $sourceLength + 1);
+            $error['complete'] = $realpath;
+            $error['count_notices'] = 0;
+            $error['count_errors']  = 0;
+            $fileList[$error['complete']] = $error;
         }
+
         ksort($fileList);
         return $fileList;
     }
@@ -237,10 +258,10 @@ class CbErrorHandler
     public function getErrorsByFile ($cbXMLFile, $fileName)
     {
         $element = $this->cbXMLHandler->loadXML($cbXMLFile);
+        $fileName = realpath($fileName);
+
         foreach ($element as $file) {
-            if (
-                0 === substr_compare($file['name'], $fileName, -1*strlen($fileName))
-            ) {
+            if ($file['name'] === $fileName) {
                 return $file->children();
             }
         }
@@ -261,9 +282,9 @@ class CbErrorHandler
         $path    = '';
 
         foreach ($element->children() as $file) {
-            $tmp['complete']      = (string)$file['name'];
-            $tmp['file']          = basename($file['name']);
-            $tmp['path']          = dirname($file['name']);
+            $tmp['complete']      = realpath($file['name']);
+            $tmp['file']          = basename($tmp['complete']);
+            $tmp['path']          = dirname($tmp['complete']);
             $tmp['count_errors']  = $this->cbXMLHandler->countItems(
                 $file->children(),
                 'severity',
@@ -295,36 +316,39 @@ class CbErrorHandler
      *
      * @param string $path1  String for comparing
      * @param string $path2  String for comparing
-     * @param int    $length The length for comparing the strings
      *
      * @return string
      */
-    private function _getCommonErrorPath($path1, $path2, $length = 0)
+    private function _getCommonErrorPath($path1, $path2)
     {
-        $length = (strlen($path1) < strlen($path2))
-        ?
-        strlen($path1)
-        :
-        strlen($path2);
+        // split by '/'
+        $patharray1 = explode(DIRECTORY_SEPARATOR, $path1);
+        $patharray2 = explode(DIRECTORY_SEPARATOR, $path2);
 
-        if (!$length && 0 === ($length = strlen($path2))) {
-            return $path1;
+        // pop filename
+        array_pop($patharray1);
+        array_pop($patharray2);
+
+        $commonpath = array();
+
+        $length = min(count($patharray1), count($patharray2));
+        $position = 0;
+
+        while ($position < $length &&
+               $patharray1[$position] === $patharray2[$position]) {
+               $commonpath[] = $patharray1[$position++];
         }
 
-        switch (strncmp($path1, $path2, $length)) {
-        case 0 :
-            $path = substr($path1, 0, $length);
-            break;
-        default :
-            $path = $this->_getCommonErrorPath(
-                substr($path1, 0, $length-1), substr($path2, 0, $length-1)
-            );
-            break;
-        }
-        return (DIRECTORY_SEPARATOR == substr($path, -1))
-            ?
-            substr($path, 0, -1)
-            :
-            $path;
+        $path = implode(DIRECTORY_SEPARATOR, $commonpath);
+        return $path;
     }
+
+    private function _isSupportedFileType($filename, $path) {
+        $fileExtension = array_pop(explode('.', $filename));
+        if (in_array($fileExtension, $this->_fileExtensionWhitelist)) {
+            return true;
+        }
+        return false;
+    }
+
 }

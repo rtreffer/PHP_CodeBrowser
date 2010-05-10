@@ -214,8 +214,9 @@ class CbCLIController
         // init needed classes
         $cbFDHandler    = new CbFDHandler();
         $cbXMLHandler   = new CbXMLHandler($cbFDHandler);
-        $cbErrorHandler = new CbErrorHandler($cbXMLHandler);
         $cbJSGenerator  = new CbJSGenerator($cbFDHandler);
+        $cbErrorHandler =
+            new CbErrorHandler($cbXMLHandler, $this->_projectSourceDir);
 
         // clear and create output directory
         $cbFDHandler->deleteDirectory($this->_htmlOutputDir);
@@ -242,11 +243,8 @@ class CbCLIController
         $errors = $cbErrorHandler->getFilesWithErrors($this->_xmlFile);
         $errors = $cbErrorHandler->replaceCommonSourcePath($errors);
 
-        // parse directory defined by --source parameter
-        $errors = $cbErrorHandler->parseSourceDirectory(
-            $this->_projectSourceDir,
-            $errors
-        );
+        // parse source directory
+        $errors = $cbErrorHandler->parseSourceDirectory($errors);
         sort($errors);
 
         // set project source dir from error list
@@ -299,7 +297,7 @@ class CbCLIController
                 $xmlLogDir = $argv[$key + 1];
                 break;
             case '--source':
-                $sourceFolder = isset($argv[$key + 1]) ? $argv[$key + 1] : '';
+                $sourceFolder = isset($argv[$key + 1]) ? $argv[$key + 1] : NULL;
                 break;
             case '--output':
                 $htmlOutput = $argv[$key + 1];
